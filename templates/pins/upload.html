@@ -1,0 +1,12 @@
+<!-- templates/pins/upload.html -->
+ {% extends 'pins/base.html' %}
+{% load static %}
+{% block content %}
+  <h2>Upload a Pin</h2>
+  <form method="post" enctype="multipart/form-data" class="upload-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn">Upload</button>
+  </form>
+  <p><a href="{% url 'index' %}">Back to gallery</a></p>
+{% endblock %}

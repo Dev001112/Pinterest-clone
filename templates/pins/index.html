@@ -1,0 +1,20 @@
+<!-- templates/pins/index.html -->
+{% extends 'pins/base.html' %}
+{% block content %}
+  <h2>Latest Pins</h2>
+
+  {% if pins %}
+  <div class="grid">
+    {% for pin in pins %}
+      <div class="pin">
+        <img src="{{ pin.image.url }}" alt="{{ pin.caption|default:'pin' }}">
+        {% if pin.caption %}
+          <div class="caption">{{ pin.caption }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p>No pins yet. <a href="{% url 'upload_pin' %}">Upload one</a>.</p>
+  {% endif %}
+{% endblock %}
