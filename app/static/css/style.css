@@ -1,0 +1,171 @@
+/* General */
+body {
+    background-color: #f5f5f5;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Auth pages */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 16px;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+/* Dashboard layout */
+.dashboard-wrapper {
+    min-height: 100vh;
+    display: flex;
+}
+
+.sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    border-right: 1px solid #e5e5e5;
+    padding: 1.5rem 1rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
+
+.sidebar-logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.sidebar-nav {
+    margin-top: 2rem;
+    list-style: none;
+    padding-left: 0;
+}
+
+.sidebar-nav li {
+    margin-bottom: 0.5rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 999px;
+    text-decoration: none;
+    color: #333;
+    font-size: 0.95rem;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.sidebar-link span.icon {
+    font-size: 1rem;
+}
+
+.sidebar-link.active,
+.sidebar-link:hover {
+    background-color: #111827;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* Main content */
+.main-content {
+    flex: 1;
+    padding: 1.5rem 2rem;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.topbar-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+/* Sections */
+.page-section {
+    display: none;
+}
+
+.page-section.active {
+    display: block;
+}
+
+/* Card */
+.custom-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.03);
+}
+
+/* Masonry-ish grid for home pins */
+.pin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.pin-card {
+    border-radius: 16px;
+    overflow: hidden;
+    background-color: #fff;
+    border: 1px solid #eee;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.pin-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.08);
+}
+
+.pin-card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.pin-card-body {
+    padding: 0.7rem 0.9rem 0.9rem;
+}
+
+/* Upload form */
+.upload-dropzone {
+    border: 2px dashed #d1d5db;
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.upload-dropzone.dragover {
+    border-color: #111827;
+    background-color: #f9fafb;
+}
+
+/* Messages list */
+.message-item {
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 0.5rem;
+    background-color: #ffffff;
+}
+
+/* Settings search */
+.settings-search-box {
+    max-width: 480px;
+}
