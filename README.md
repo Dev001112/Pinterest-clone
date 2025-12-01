@@ -7,19 +7,19 @@ Users can upload pins, view a live home feed, share pins in direct messages, cha
 This project includes:
 User authentication: signup, login, logout
 Pin uploads with image preview
-✓ Real-time home feed (auto-refresh of new uploads)
+* Real-time home feed (auto-refresh of new uploads)
 Real-time messaging - DMs auto-update without refresh
-✓ Share any pin directly into DM via a pop-up
-✓ Live user search - for messages & sharing
-✓ Clean frontend with Bootstrap
+* Share any pin directly into DM via a pop-up
+* Live user search - for messages & sharing
+* Clean frontend with Bootstrap
 
-✓ Flask backend + SQLAlchemy + LoginManager
+* Flask backend + SQLAlchemy + LoginManager
 
-✓ Folder-based project structure and templates
+* Folder-based project structure and templates
 
-???? Features
+Features
 
-???? Authentication
+ Authentication
 
 User sign up with username + email + password
 
