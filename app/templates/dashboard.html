@@ -9,35 +9,49 @@
   <aside class="sidebar">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <div class="sidebar-logo">PinBoard</div>
-      <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
-           style="width:32px;height:32px;font-size:0.8rem;">
-        {{ current_user.username[0] | upper if current_user.is_authenticated else 'U' }}
-      </div>
+      <!-- Make avatar clickable -> profile -->
+      <a href="{{ url_for('profile') }}" class="text-decoration-none">
+        <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
+             style="width:32px;height:32px;font-size:0.8rem;">
+          {{ current_user.username[0] | upper if current_user.is_authenticated else 'U' }}
+        </div>
+      </a>
     </div>
 
     <ul class="sidebar-nav" id="sidebarNav">
       <li>
-        <a href="#" class="sidebar-link {% if active_tab == 'home' %}active{% endif %}" data-target="homeSection">
+        <a href="#" class="sidebar-link {% if active_tab == 'home' %}active{% endif %}"
+           data-target="homeSection">
           <span class="icon">🏠</span>
           <span>Home</span>
         </a>
       </li>
       <li>
-        <a href="#" class="sidebar-link {% if active_tab == 'upload' %}active{% endif %}" data-target="uploadSection">
+        <a href="#" class="sidebar-link {% if active_tab == 'upload' %}active{% endif %}"
+           data-target="uploadSection">
           <span class="icon">⬆️</span>
           <span>Upload</span>
         </a>
       </li>
       <li>
-        <a href="#" class="sidebar-link {% if active_tab == 'messages' %}active{% endif %}" data-target="messagesSection">
+        <a href="#" class="sidebar-link {% if active_tab == 'messages' %}active{% endif %}"
+           data-target="messagesSection">
           <span class="icon">💬</span>
           <span>Messages</span>
         </a>
       </li>
       <li>
-        <a href="#" class="sidebar-link {% if active_tab == 'settings' %}active{% endif %}" data-target="settingsSection">
+        <a href="#" class="sidebar-link {% if active_tab == 'settings' %}active{% endif %}"
+           data-target="settingsSection">
           <span class="icon">⚙️</span>
           <span>Settings</span>
+        </a>
+      </li>
+      <!-- Profile = REAL link (no data-target), goes to /profile -->
+      <li>
+        <a href="{{ url_for('profile') }}" class="sidebar-link">
+          <span class="icon">👤</span>
+          <span>Profile</span>
         </a>
       </li>
     </ul>
@@ -80,7 +94,7 @@
       </div>
 
       {% if pins %}
-        <div class="pin-grid mt-3">
+        <div class="pin-grid mt-3" id="pinGrid">
           {% for pin in pins %}
           <div class="pin-card">
             <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
@@ -94,12 +108,35 @@
                 by {{ pin.author.username }} · {{ pin.created_at.strftime('%Y-%m-%d') }}
               </small>
 
-              <!-- Share button -->
-              <button class="btn btn-sm btn-outline-secondary mt-2 share-btn"
-                      type="button"
-                      data-pin="{{ pin.id }}">
-                <span class="icon">📤</span> Share
-              </button>
+              <div class="d-flex gap-2 mt-2 align-items-center flex-wrap">
+
+                <!-- Like button -->
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger like-btn {% if pin.id in user_liked_ids %}active{% endif %}"
+                        data-pin="{{ pin.id }}">
+                  <span class="like-icon">
+                    {% if pin.id in user_liked_ids %}♥{% else %}♡{% endif %}
+                  </span>
+                  <span class="like-count">{{ pin.likes|length }}</span>
+                </button>
+
+                <!-- Save button -->
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary save-btn {% if pin.id in user_saved_ids %}active{% endif %}"
+                        data-pin="{{ pin.id }}">
+                  <span class="save-icon">
+                    {% if pin.id in user_saved_ids %}🔖 Saved{% else %}🔖 Save{% endif %}
+                  </span>
+                </button>
+
+                <!-- Share button -->
+                <button class="btn btn-sm btn-outline-secondary share-btn"
+                        type="button"
+                        data-pin="{{ pin.id }}">
+                  <span class="icon">📤</span>
+                  <span>Share</span>
+                </button>
+              </div>
 
               <!-- Share popup bubble -->
               <div class="share-popup d-none" id="sharePopup-{{ pin.id }}">
@@ -198,7 +235,7 @@
 
           <hr>
 
-          <!-- contacts list wrapper so JS can live-update it -->
+          <!-- contacts list wrapper -->
           <div id="contactsList">
             <div class="fw-semibold small mb-2">Recent chats</div>
             {% if contacts %}

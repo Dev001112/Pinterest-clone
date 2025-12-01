@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const navLinks = document.querySelectorAll(".sidebar-link");
+  const navLinks = document.querySelectorAll(".sidebar-link[data-target]");
   const sections = document.querySelectorAll(".page-section");
   const topbarTitle = document.getElementById("topbarTitle");
 
@@ -71,59 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Share popup open/close
-  document.querySelectorAll(".share-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const pinId = btn.dataset.pin;
-      const popup = document.getElementById(`sharePopup-${pinId}`);
-      if (!popup) return;
-
-      document.querySelectorAll(".share-popup").forEach(p => {
-        if (p !== popup) p.classList.add("d-none");
-      });
-
-      popup.classList.toggle("d-none");
-    });
-  });
-
-  // Close share popups on outside click
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".share-popup") && !e.target.closest(".share-btn")) {
-      document.querySelectorAll(".share-popup").forEach(p => p.classList.add("d-none"));
-    }
-  });
-
-  // User search inside share popups
-  document.querySelectorAll(".user-search-input").forEach(input => {
-    input.addEventListener("input", async () => {
-      const query = input.value.trim();
-      const pinId = input.dataset.pin;
-      const resultsBox = document.getElementById(`searchResults-${pinId}`);
-      if (!resultsBox) return;
-
-      if (!query) {
-        resultsBox.innerHTML = "";
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/search_users?q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        resultsBox.innerHTML = "";
-
-        data.results.forEach(u => {
-          const row = document.createElement("div");
-          row.textContent = u.username;
-          row.className = "user-result-row";
-          row.onclick = () => sendPinToUser(pinId, u.id, u.username);
-          resultsBox.appendChild(row);
-        });
-      } catch (err) {
-        console.error("user search error", err);
-      }
-    });
-  });
+  // Initial wiring for share / like / save
+  attachShareHandlers();
+  attachLikeSaveHandlers();
 
   // Messages tab global user search
   const msgSearch = document.getElementById("messagesSearch");
@@ -165,7 +115,145 @@ document.addEventListener("DOMContentLoaded", () => {
       startMessagesPolling(otherId, chatMessages);
     }
   }
+
+  // Live pins polling for home feed
+  const pinGrid = document.getElementById("pinGrid");
+  if (pinGrid) {
+    startPinsPolling(pinGrid);
+  }
 });
+
+// Attach share popup & search handlers
+function attachShareHandlers() {
+  // buttons
+  document.querySelectorAll(".share-btn").forEach(btn => {
+    if (btn.dataset._shareWired) return;
+    btn.dataset._shareWired = "1";
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const pinId = btn.dataset.pin;
+      const popup = document.getElementById(`sharePopup-${pinId}`);
+      if (!popup) return;
+
+      document.querySelectorAll(".share-popup").forEach(p => {
+        if (p !== popup) p.classList.add("d-none");
+      });
+
+      popup.classList.toggle("d-none");
+    });
+  });
+
+  // close share popups when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".share-popup") && !e.target.closest(".share-btn")) {
+      document.querySelectorAll(".share-popup").forEach(p => p.classList.add("d-none"));
+    }
+  });
+
+  // user search inside share popups
+  document.querySelectorAll(".user-search-input").forEach(input => {
+    if (input.dataset._shareSearchWired) return;
+    input.dataset._shareSearchWired = "1";
+
+    input.addEventListener("input", async () => {
+      const query = input.value.trim();
+      const pinId = input.dataset.pin;
+      const resultsBox = document.getElementById(`searchResults-${pinId}`);
+      if (!resultsBox) return;
+
+      if (!query) {
+        resultsBox.innerHTML = "";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/search_users?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        resultsBox.innerHTML = "";
+
+        data.results.forEach(u => {
+          const row = document.createElement("div");
+          row.textContent = u.username;
+          row.className = "user-result-row";
+          row.onclick = () => sendPinToUser(pinId, u.id, u.username);
+          resultsBox.appendChild(row);
+        });
+      } catch (err) {
+        console.error("user search error", err);
+      }
+    });
+  });
+}
+
+// Attach like / save handlers
+function attachLikeSaveHandlers() {
+  // LIKE
+  document.querySelectorAll(".like-btn").forEach(btn => {
+    if (btn.dataset._likeWired) return;
+    btn.dataset._likeWired = "1";
+
+    btn.addEventListener("click", async () => {
+      const pinId = btn.dataset.pin;
+      try {
+        const res = await fetch(`/pin/${pinId}/like`, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        });
+        const data = await res.json();
+        if (!data.ok) return;
+
+        const countSpan = btn.querySelector(".like-count");
+        const iconSpan = btn.querySelector(".like-icon");
+
+        if (data.liked) {
+          btn.classList.add("active");
+          if (iconSpan) iconSpan.textContent = "♥";
+        } else {
+          btn.classList.remove("active");
+          if (iconSpan) iconSpan.textContent = "♡";
+        }
+        if (countSpan) countSpan.textContent = data.count;
+      } catch (err) {
+        console.error("like error", err);
+      }
+    });
+  });
+
+  // SAVE
+  document.querySelectorAll(".save-btn").forEach(btn => {
+    if (btn.dataset._saveWired) return;
+    btn.dataset._saveWired = "1";
+
+    btn.addEventListener("click", async () => {
+      const pinId = btn.dataset.pin;
+      try {
+        const res = await fetch(`/pin/${pinId}/save`, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest"
+          }
+        });
+        const data = await res.json();
+        if (!data.ok) return;
+
+        const iconSpan = btn.querySelector(".save-icon");
+
+        if (data.saved) {
+          btn.classList.add("active");
+          if (iconSpan) iconSpan.textContent = "🔖 Saved";
+        } else {
+          btn.classList.remove("active");
+          if (iconSpan) iconSpan.textContent = "🔖 Save";
+        }
+      } catch (err) {
+        console.error("save error", err);
+      }
+    });
+  });
+}
 
 // send pin via AJAX – stay on home, show toast
 async function sendPinToUser(pinId, userId, username) {
@@ -186,7 +274,6 @@ async function sendPinToUser(pinId, userId, username) {
     const data = await res.json();
     if (data.ok) {
       showToast(`Pin shared with ${username}`);
-      // close all popups
       document.querySelectorAll(".share-popup").forEach(p => p.classList.add("d-none"));
     } else {
       showToast(data.error || "Could not share pin", true);
@@ -241,7 +328,7 @@ function startMessagesPolling(otherId, container) {
       const data = await res.json();
       const jsonString = JSON.stringify(data.messages);
       if (jsonString === lastJson) {
-        return; // nothing changed
+        return;
       }
       lastJson = jsonString;
 
@@ -283,5 +370,79 @@ function startMessagesPolling(otherId, container) {
   }
 
   fetchAndRender();
-  setInterval(fetchAndRender, 3000); // 3s polling
+  setInterval(fetchAndRender, 3000);
+}
+
+// polling: keep Home feed pins updated
+function startPinsPolling(container) {
+  let lastJson = null;
+
+  async function fetchAndRenderPins() {
+    try {
+      const res = await fetch("/api/pins");
+      const data = await res.json();
+      const jsonString = JSON.stringify(data.pins);
+      if (jsonString === lastJson) return;
+      lastJson = jsonString;
+
+      container.innerHTML = "";
+      data.pins.forEach(pin => {
+        const card = document.createElement("div");
+        card.className = "pin-card";
+        card.innerHTML = `
+          <img src="${pin.image_url}"
+               class="pin-card-img" alt="${pin.title}">
+          <div class="pin-card-body">
+            <div class="fw-semibold text-truncate">${pin.title}</div>
+            ${pin.description ? `<small class="text-muted d-block text-truncate">${pin.description}</small>` : ""}
+            <small class="text-muted d-block">
+              by ${pin.author} · ${pin.created_at}
+            </small>
+
+            <div class="d-flex gap-2 mt-2 align-items-center flex-wrap">
+
+              <button type="button"
+                      class="btn btn-sm btn-outline-danger like-btn ${pin.liked ? "active" : ""}"
+                      data-pin="${pin.id}">
+                <span class="like-icon">${pin.liked ? "♥" : "♡"}</span>
+                <span class="like-count">${pin.likes_count}</span>
+              </button>
+
+              <button type="button"
+                      class="btn btn-sm btn-outline-secondary save-btn ${pin.saved ? "active" : ""}"
+                      data-pin="${pin.id}">
+                <span class="save-icon">${pin.saved ? "🔖 Saved" : "🔖 Save"}</span>
+              </button>
+
+              <button class="btn btn-sm btn-outline-secondary share-btn"
+                      type="button"
+                      data-pin="${pin.id}">
+                <span class="icon">📤</span> Share
+              </button>
+            </div>
+
+            <div class="share-popup d-none" id="sharePopup-${pin.id}">
+              <div class="share-popup-inner">
+                <input type="text"
+                       class="form-control form-control-sm user-search-input"
+                       placeholder="Search user..."
+                       data-pin="${pin.id}">
+                <div class="user-search-results mt-2"
+                     id="searchResults-${pin.id}"></div>
+              </div>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      attachShareHandlers();
+      attachLikeSaveHandlers();
+    } catch (err) {
+      console.error("poll pins error", err);
+    }
+  }
+
+  fetchAndRenderPins();
+  setInterval(fetchAndRenderPins, 5000);
 }

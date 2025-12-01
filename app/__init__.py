@@ -23,7 +23,7 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///app.db"  # later we can switch to PostgreSQL
+        "sqlite:///app.db"  # for dev; can be changed to Postgres later
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -39,7 +39,7 @@ def create_app():
     login_manager.login_view = "login"
     login_manager.login_message_category = "info"
 
-    from .models import User, Pin, Message
+    from .models import User, Pin, Message, Like, SavedPin
 
     @login_manager.user_loader
     def load_user(user_id):
@@ -158,6 +158,10 @@ def create_app():
 
         share_pin = Pin.query.get(share_pin_id) if share_pin_id else None
 
+        # liked/saved state
+        user_liked_ids = {like.pin_id for like in current_user.likes}
+        user_saved_ids = {save.pin_id for save in current_user.saves}
+
         return render_template(
             "dashboard.html",
             pins=pins,
@@ -167,6 +171,8 @@ def create_app():
             messages=conversation_messages,
             contacts=contacts,
             share_pin=share_pin,
+            user_liked_ids=user_liked_ids,
+            user_saved_ids=user_saved_ids,
         )
 
     @app.route("/upload", methods=["POST"])
@@ -207,6 +213,78 @@ def create_app():
         flash("Pin uploaded!", "success")
         return redirect(url_for("dashboard", tab="home"))
 
+    # ---------- PROFILE (liked + saved pins) ----------
+
+    @app.route("/profile")
+    @login_required
+    def profile():
+        # pins the user liked (most recent like first)
+        liked_pins = (
+            Pin.query.join(Like, Like.pin_id == Pin.id)
+            .filter(Like.user_id == current_user.id)
+            .order_by(Like.created_at.desc())
+            .all()
+        )
+
+        # pins the user saved (most recent save first)
+        saved_pins = (
+            Pin.query.join(SavedPin, SavedPin.pin_id == Pin.id)
+            .filter(SavedPin.user_id == current_user.id)
+            .order_by(SavedPin.created_at.desc())
+            .all()
+        )
+
+        return render_template(
+            "profile.html",
+            liked_pins=liked_pins,
+            saved_pins=saved_pins,
+        )
+
+    # ---------- LIKE / SAVE ----------
+
+    @app.route("/pin/<int:pin_id>/like", methods=["POST"])
+    @login_required
+    def like_pin(pin_id):
+        pin = Pin.query.get_or_404(pin_id)
+
+        existing = Like.query.filter_by(
+            user_id=current_user.id,
+            pin_id=pin.id
+        ).first()
+
+        if existing:
+            db.session.delete(existing)
+            liked = False
+        else:
+            db.session.add(Like(user_id=current_user.id, pin_id=pin.id))
+            liked = True
+
+        db.session.commit()
+        count = Like.query.filter_by(pin_id=pin.id).count()
+
+        return jsonify({"ok": True, "liked": liked, "count": count})
+
+    @app.route("/pin/<int:pin_id>/save", methods=["POST"])
+    @login_required
+    def save_pin(pin_id):
+        pin = Pin.query.get_or_404(pin_id)
+
+        existing = SavedPin.query.filter_by(
+            user_id=current_user.id,
+            pin_id=pin.id
+        ).first()
+
+        if existing:
+            db.session.delete(existing)
+            saved = False
+        else:
+            db.session.add(SavedPin(user_id=current_user.id, pin_id=pin.id))
+            saved = True
+
+        db.session.commit()
+
+        return jsonify({"ok": True, "saved": saved})
+
     # ---------- MESSAGES ----------
 
     @app.route("/messages/send", methods=["POST"])
@@ -216,8 +294,6 @@ def create_app():
         - normal DM form (redirects to messages tab)
         - AJAX pin-share (returns JSON, no redirect)
         """
-        from .models import Pin
-
         recipient_id_raw = request.form.get("recipient_id")
         text = request.form.get("text", "").strip()
         pin_id_raw = request.form.get("pin_id")
@@ -279,11 +355,9 @@ def create_app():
         db.session.add(msg_obj)
         db.session.commit()
 
-        # If this was an AJAX share-pin, stay on same page & return JSON
         if is_ajax:
             return jsonify({"ok": True})
 
-        # Normal DM send: go back to conversation
         flash("Message sent.", "success")
         return redirect(url_for("dashboard", tab="messages", chat_with=recipient_id))
 
@@ -324,6 +398,31 @@ def create_app():
             "other_username": other.username,
             "messages": result
         })
+
+    # ---------- PINS API (live home feed) ----------
+
+    @app.route("/api/pins")
+    @login_required
+    def api_pins():
+        pins = Pin.query.order_by(Pin.created_at.desc()).all()
+
+        user_liked_ids = {like.pin_id for like in current_user.likes}
+        user_saved_ids = {save.pin_id for save in current_user.saves}
+
+        items = []
+        for p in pins:
+            items.append({
+                "id": p.id,
+                "title": p.title,
+                "description": p.description,
+                "author": p.author.username,
+                "created_at": p.created_at.strftime("%Y-%m-%d"),
+                "image_url": url_for("static", filename="uploads/" + p.image_filename),
+                "likes_count": len(p.likes),
+                "liked": p.id in user_liked_ids,
+                "saved": p.id in user_saved_ids,
+            })
+        return jsonify({"pins": items})
 
     # ---------- USER SEARCH API ----------
 

@@ -176,7 +176,7 @@ body {
 
 .share-popup {
   position: absolute;
-  bottom: 60px;           /* appears above the button */
+  bottom: 60px;
   right: 10px;
   background: #ffffff;
   border: 1px solid #ddd;
@@ -215,10 +215,6 @@ body {
   overflow-y: auto;
 }
 
-#messagesSearchResults .user-result-row {
-  padding-left: 0;
-}
-
 /* Auth */
 
 .auth-wrapper {
@@ -231,6 +227,20 @@ body {
 .auth-card {
   width: 360px;
   max-width: 100%;
+}
+
+/* Like / Save button states */
+
+.like-btn.active {
+  background-color: #e60023;
+  border-color: #e60023;
+  color: #fff;
+}
+
+.save-btn.active {
+  background-color: #111;
+  border-color: #111;
+  color: #fff;
 }
 
 /* Small utilities */

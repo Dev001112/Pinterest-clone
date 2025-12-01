@@ -12,6 +12,7 @@ class User(UserMixin, db.Model):
 
     # relationships
     pins = db.relationship("Pin", backref="author", lazy=True)
+
     sent_messages = db.relationship(
         "Message",
         foreign_keys="Message.sender_id",
@@ -24,6 +25,9 @@ class User(UserMixin, db.Model):
         backref="recipient",
         lazy=True,
     )
+
+    likes = db.relationship("Like", backref="user", lazy=True)
+    saves = db.relationship("SavedPin", backref="user", lazy=True)
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -42,6 +46,8 @@ class Pin(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     messages = db.relationship("Message", backref="pin", lazy=True)
+    likes = db.relationship("Like", backref="pin", lazy=True)
+    saves = db.relationship("SavedPin", backref="pin", lazy=True)
 
 
 class Message(db.Model):
@@ -53,3 +59,25 @@ class Message(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     pin_id = db.Column(db.Integer, db.ForeignKey("pin.id"), nullable=True)
+
+
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    pin_id = db.Column(db.Integer, db.ForeignKey("pin.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "pin_id", name="uniq_like_user_pin"),
+    )
+
+
+class SavedPin(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    pin_id = db.Column(db.Integer, db.ForeignKey("pin.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "pin_id", name="uniq_save_user_pin"),
+    )
