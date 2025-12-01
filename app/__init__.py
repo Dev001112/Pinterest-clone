@@ -1,12 +1,13 @@
 from flask import (
     Flask, render_template, redirect,
-    url_for, request, flash
+    url_for, request, flash, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, login_user, login_required,
     logout_user, current_user
 )
+from sqlalchemy import or_
 import os
 import uuid
 
@@ -22,7 +23,7 @@ def create_app():
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///app.db"  # dev DB; later we can switch to PostgreSQL
+        "sqlite:///app.db"  # later we can switch to PostgreSQL
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -38,21 +39,19 @@ def create_app():
     login_manager.login_view = "login"
     login_manager.login_message_category = "info"
 
-    from .models import User, Pin
+    from .models import User, Pin, Message
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # ---------- ROUTES ----------
+    # ---------- AUTH ROUTES ----------
 
     @app.route("/")
     def root():
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
         return redirect(url_for("login"))
-
-    # AUTH
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -117,57 +116,233 @@ def create_app():
         flash("You have been logged out.", "info")
         return redirect(url_for("login"))
 
-    # DASHBOARD
+    # ---------- DASHBOARD & PINS ----------
 
     @app.route("/dashboard")
     @login_required
     def dashboard():
-        # show all pins newest-first for now
-        pins = Pin.query.order_by(Pin.created_at.desc()).all()
-        return render_template("dashboard.html", pins=pins)
+        active_tab = request.args.get("tab", "home")
 
-    # UPLOAD PIN
+        chat_with_id = request.args.get("chat_with", type=int)
+        share_pin_id = request.args.get("share_pin", type=int)
+
+        pins = Pin.query.order_by(Pin.created_at.desc()).all()
+        users = User.query.filter(User.id != current_user.id).all()
+
+        chat_with_user = None
+        conversation_messages = []
+        if chat_with_id:
+            chat_with_user = User.query.get(chat_with_id)
+            if chat_with_user:
+                conversation_messages = Message.query.filter(
+                    or_(
+                        (Message.sender_id == current_user.id) &
+                        (Message.recipient_id == chat_with_id),
+                        (Message.sender_id == chat_with_id) &
+                        (Message.recipient_id == current_user.id),
+                    )
+                ).order_by(Message.created_at.asc()).all()
+
+        contact_ids = set()
+        all_my_msgs = Message.query.filter(
+            or_(
+                Message.sender_id == current_user.id,
+                Message.recipient_id == current_user.id,
+            )
+        ).all()
+        for m in all_my_msgs:
+            other_id = m.recipient_id if m.sender_id == current_user.id else m.sender_id
+            contact_ids.add(other_id)
+
+        contacts = User.query.filter(User.id.in_(contact_ids)).all() if contact_ids else []
+
+        share_pin = Pin.query.get(share_pin_id) if share_pin_id else None
+
+        return render_template(
+            "dashboard.html",
+            pins=pins,
+            users=users,
+            active_tab=active_tab,
+            chat_with_user=chat_with_user,
+            messages=conversation_messages,
+            contacts=contacts,
+            share_pin=share_pin,
+        )
 
     @app.route("/upload", methods=["POST"])
     @login_required
     def upload_pin():
         title = request.form.get("title")
         description = request.form.get("description")
-        tags = request.form.get("tags")  # not used yet, but kept
-
+        tags = request.form.get("tags")
         image = request.files.get("image")
 
         if not title or not image:
             flash("Title and image are required.", "danger")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard", tab="upload"))
 
-        # basic extension check
         allowed_ext = {"jpg", "jpeg", "png", "gif"}
         if "." not in image.filename:
             flash("Invalid image file.", "danger")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard", tab="upload"))
 
         ext = image.filename.rsplit(".", 1)[1].lower()
         if ext not in allowed_ext:
             flash("Only JPG, JPEG, PNG, GIF allowed.", "danger")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("dashboard", tab="upload"))
 
-        # generate unique filename
         filename = f"{uuid.uuid4().hex}.{ext}"
         save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
         image.save(save_path)
 
-        # create pin
         pin = Pin(
             title=title,
             description=description,
             image_filename=filename,
-            author=current_user
+            author=current_user,
         )
         db.session.add(pin)
         db.session.commit()
 
         flash("Pin uploaded!", "success")
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("dashboard", tab="home"))
+
+    # ---------- MESSAGES ----------
+
+    @app.route("/messages/send", methods=["POST"])
+    @login_required
+    def send_message():
+        """Handles both:
+        - normal DM form (redirects to messages tab)
+        - AJAX pin-share (returns JSON, no redirect)
+        """
+        from .models import Pin
+
+        recipient_id_raw = request.form.get("recipient_id")
+        text = request.form.get("text", "").strip()
+        pin_id_raw = request.form.get("pin_id")
+
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+        if not recipient_id_raw:
+            msg = "Please choose a user to message."
+            if is_ajax:
+                return jsonify({"ok": False, "error": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for("dashboard", tab="messages"))
+
+        try:
+            recipient_id = int(recipient_id_raw)
+        except ValueError:
+            msg = "Invalid recipient."
+            if is_ajax:
+                return jsonify({"ok": False, "error": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for("dashboard", tab="messages"))
+
+        if recipient_id == current_user.id:
+            msg = "You cannot message yourself."
+            if is_ajax:
+                return jsonify({"ok": False, "error": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for("dashboard", tab="messages"))
+
+        recipient = User.query.get(recipient_id)
+        if not recipient:
+            msg = "User not found."
+            if is_ajax:
+                return jsonify({"ok": False, "error": msg}), 404
+            flash(msg, "danger")
+            return redirect(url_for("dashboard", tab="messages"))
+
+        pin = None
+        if pin_id_raw:
+            try:
+                pin_id = int(pin_id_raw)
+                pin = Pin.query.get(pin_id)
+            except ValueError:
+                pin = None
+
+        if not text and not pin:
+            msg = "Cannot send an empty message."
+            if is_ajax:
+                return jsonify({"ok": False, "error": msg}), 400
+            flash(msg, "danger")
+            return redirect(url_for("dashboard", tab="messages", chat_with=recipient_id))
+
+        msg_obj = Message(
+            sender_id=current_user.id,
+            recipient_id=recipient_id,
+            text=text if text else None,
+            pin_id=pin.id if pin else None,
+        )
+        db.session.add(msg_obj)
+        db.session.commit()
+
+        # If this was an AJAX share-pin, stay on same page & return JSON
+        if is_ajax:
+            return jsonify({"ok": True})
+
+        # Normal DM send: go back to conversation
+        flash("Message sent.", "success")
+        return redirect(url_for("dashboard", tab="messages", chat_with=recipient_id))
+
+    # ---------- LIVE MESSAGES API ----------
+
+    @app.route("/api/messages_for/<int:user_id>")
+    @login_required
+    def api_messages_for(user_id):
+        other = User.query.get_or_404(user_id)
+
+        msgs = Message.query.filter(
+            or_(
+                (Message.sender_id == current_user.id) &
+                (Message.recipient_id == user_id),
+                (Message.sender_id == user_id) &
+                (Message.recipient_id == current_user.id),
+            )
+        ).order_by(Message.created_at.asc()).all()
+
+        result = []
+        for m in msgs:
+            result.append({
+                "id": m.id,
+                "from_me": m.sender_id == current_user.id,
+                "text": m.text,
+                "created_at": m.created_at.isoformat(),
+                "pin": {
+                    "title": m.pin.title,
+                    "description": m.pin.description,
+                    "image_url": url_for(
+                        "static",
+                        filename="uploads/" + m.pin.image_filename
+                    )
+                } if m.pin else None
+            })
+
+        return jsonify({
+            "other_username": other.username,
+            "messages": result
+        })
+
+    # ---------- USER SEARCH API ----------
+
+    @app.route("/api/search_users")
+    @login_required
+    def search_users():
+        q = request.args.get("q", "").strip()
+        if not q:
+            return jsonify({"results": []})
+
+        users = User.query.filter(
+            User.username.ilike(f"%{q}%")
+        ).limit(10).all()
+
+        return jsonify({
+            "results": [
+                {"id": u.id, "username": u.username}
+                for u in users if u.id != current_user.id
+            ]
+        })
 
     return app

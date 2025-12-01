@@ -10,8 +10,20 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
 
-    # one user -> many pins
+    # relationships
     pins = db.relationship("Pin", backref="author", lazy=True)
+    sent_messages = db.relationship(
+        "Message",
+        foreign_keys="Message.sender_id",
+        backref="sender",
+        lazy=True,
+    )
+    received_messages = db.relationship(
+        "Message",
+        foreign_keys="Message.recipient_id",
+        backref="recipient",
+        lazy=True,
+    )
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -28,3 +40,16 @@ class Pin(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    messages = db.relationship("Message", backref="pin", lazy=True)
+
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    text = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    pin_id = db.Column(db.Integer, db.ForeignKey("pin.id"), nullable=True)
