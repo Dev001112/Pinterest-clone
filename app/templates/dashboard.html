@@ -11,7 +11,7 @@
       <div class="sidebar-logo">PinBoard</div>
       <div class="rounded-circle bg-dark text-white d-flex align-items-center justify-content-center"
            style="width:32px;height:32px;font-size:0.8rem;">
-        D
+        {{ current_user.username[0] | upper if current_user.is_authenticated else 'U' }}
       </div>
     </div>
 
@@ -45,8 +45,8 @@
     <hr>
 
     <div class="mt-3 small text-muted">
-      <div>Logged in as <strong>dev</strong></div>
-      <a href="{{ url_for('login') }}" class="text-muted">Logout</a>
+      <div>Logged in as <strong>{{ current_user.username }}</strong></div>
+      <a href="{{ url_for('logout') }}" class="text-muted">Logout</a>
     </div>
   </aside>
 
@@ -63,81 +63,91 @@
     <!-- HOME SECTION -->
     <section id="homeSection" class="page-section active">
       <div class="custom-card mb-3">
-        <h5 class="mb-1">Welcome back, Dev 👋</h5>
+        <h5 class="mb-1">Welcome back, {{ current_user.username }} 👋</h5>
         <p class="text-muted mb-0">
-          Here’s your home feed. Later we’ll fill this from the API.
+          Here’s your home feed. These pins are loaded from the database.
         </p>
       </div>
 
-      <div class="pin-grid mt-3">
-        <!-- Sample static cards -->
-        <div class="pin-card">
-          <img src="https://images.pexels.com/photos/414612/pexels-photo-414612.jpeg?auto=compress&cs=tinysrgb&w=600"
-               class="pin-card-img" alt="Sample 1">
-          <div class="pin-card-body">
-            <div class="fw-semibold">Workspace inspo</div>
-            <small class="text-muted">by you</small>
+      {% if pins %}
+        <div class="pin-grid mt-3">
+          {% for pin in pins %}
+          <div class="pin-card">
+            <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+                 class="pin-card-img" alt="{{ pin.title }}">
+            <div class="pin-card-body">
+              <div class="fw-semibold text-truncate">{{ pin.title }}</div>
+              {% if pin.description %}
+                <small class="text-muted d-block text-truncate">{{ pin.description }}</small>
+              {% endif %}
+              <small class="text-muted">
+                by {{ pin.author.username }} · {{ pin.created_at.strftime('%Y-%m-%d') }}
+              </small>
+            </div>
           </div>
+          {% endfor %}
         </div>
-
-        <div class="pin-card">
-          <img src="https://images.pexels.com/photos/196664/pexels-photo-196664.jpeg?auto=compress&cs=tinysrgb&w=600"
-               class="pin-card-img" alt="Sample 2">
-          <div class="pin-card-body">
-            <div class="fw-semibold">Minimal UI shots</div>
-            <small class="text-muted">by you</small>
-          </div>
-        </div>
-
-        <div class="pin-card">
-          <img src="https://images.pexels.com/photos/34088/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600"
-               class="pin-card-img" alt="Sample 3">
-          <div class="pin-card-body">
-            <div class="fw-semibold">Color palettes</div>
-            <small class="text-muted">by you</small>
-          </div>
-        </div>
-      </div>
+      {% else %}
+        <p class="mt-3 text-muted">
+          No pins yet. Go to the <strong>Upload</strong> tab and create your first pin.
+        </p>
+      {% endif %}
     </section>
 
-    <!-- UPLOAD SECTION -->
+        <!-- UPLOAD SECTION -->
     <section id="uploadSection" class="page-section">
       <div class="custom-card mb-3">
         <h5 class="mb-1">Upload a new pin</h5>
-        <p class="text-muted mb-0">Later this form will talk to our Flask API.</p>
+        <p class="text-muted mb-0">This will save to the database and show on your home feed.</p>
       </div>
 
-      <div class="row">
-        <div class="col-md-6">
-          <div class="upload-dropzone mb-3" id="uploadDropzone">
-            <p class="mb-1 fw-semibold">Drop image here, or click to browse</p>
-            <p class="small text-muted mb-0">
-              JPG, PNG, GIF up to 5MB
-            </p>
-            <input type="file" accept="image/*" id="uploadInput" style="display:none;">
+      <!-- IMPORTANT: real upload form -->
+      <form method="post"
+            action="{{ url_for('upload_pin') }}"
+            enctype="multipart/form-data">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="upload-dropzone mb-3" id="uploadDropzone">
+              <div id="uploadPlaceholder">
+                <p class="mb-1 fw-semibold">Drop image here, or click to browse</p>
+                <p class="small text-muted mb-0">
+                  JPG, PNG, GIF up to 5MB
+                </p>
+              </div>
+              <!-- preview image (hidden by default) -->
+              <img id="uploadPreview"
+                   class="img-fluid rounded mt-2 d-none"
+                   alt="Selected image preview">
+              <!-- this is the actual file input used by the backend -->
+              <input type="file"
+                     accept="image/*"
+                     id="uploadInput"
+                     name="image"
+                     style="display:none;"
+                     required>
+            </div>
           </div>
-        </div>
 
-        <div class="col-md-6">
-          <form>
+          <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Title</label>
-              <input type="text" class="form-control" placeholder="Give your pin a title">
+              <input name="title" type="text" class="form-control" placeholder="Give your pin a title" required>
             </div>
             <div class="mb-3">
               <label class="form-label">Description</label>
-              <textarea class="form-control" rows="3" placeholder="Tell people what this pin is about"></textarea>
+              <textarea name="description" class="form-control" rows="3"
+                        placeholder="Tell people what this pin is about"></textarea>
             </div>
             <div class="mb-3">
               <label class="form-label">Tags</label>
-              <input type="text" class="form-control" placeholder="#design #inspo #ui">
+              <input name="tags" type="text" class="form-control" placeholder="#design #inspo #ui">
             </div>
             <button type="submit" class="btn btn-dark">
               Upload
             </button>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
     </section>
 
     <!-- MESSAGES SECTION -->
@@ -195,11 +205,11 @@
             <form>
               <div class="mb-3">
                 <label class="form-label">Display name</label>
-                <input type="text" class="form-control" value="Dev">
+                <input type="text" class="form-control" value="{{ current_user.username }}">
               </div>
               <div class="mb-3">
                 <label class="form-label">Email</label>
-                <input type="email" class="form-control" value="dev@example.com">
+                <input type="email" class="form-control" value="{{ current_user.email }}">
               </div>
               <div class="mb-3">
                 <label class="form-label">New password</label>
@@ -212,7 +222,6 @@
           </div>
         </div>
 
-        <!-- SEARCH SECTION -->
         <div class="col-lg-6">
           <div class="custom-card">
             <h5 class="mb-2">Search settings</h5>
