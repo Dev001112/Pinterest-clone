@@ -23,6 +23,34 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Dark Mode
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    if (localStorage.getItem("theme") === "dark") {
+      document.body.setAttribute("data-theme", "dark");
+      themeToggle.checked = true;
+    }
+    themeToggle.addEventListener("change", (e) => {
+      if (!e.target.checked) {
+        document.body.removeAttribute("data-theme");
+        localStorage.setItem("theme", "light");
+      } else {
+        document.body.setAttribute("data-theme", "dark");
+        localStorage.setItem("theme", "dark");
+      }
+    });
+  }
+
+  // Pin search globally accessible method attach
+  const globalSearchInput = document.getElementById("globalSearchInput");
+  if (globalSearchInput) {
+    globalSearchInput.addEventListener("input", () => {
+      if (window.fetchAndRenderPinsGlobal) {
+        window.fetchAndRenderPinsGlobal(true);
+      }
+    });
+  }
+
   // Upload dropzone with preview
   const dropzone = document.getElementById("uploadDropzone");
   const fileInput = document.getElementById("uploadInput");
@@ -377,47 +405,51 @@ function startMessagesPolling(otherId, container) {
 function startPinsPolling(container) {
   let lastJson = null;
 
-  async function fetchAndRenderPins() {
+  window.fetchAndRenderPinsGlobal = async function(force = false) {
     try {
-      const res = await fetch("/api/pins");
+      const searchInput = document.getElementById("globalSearchInput");
+      const q = searchInput ? searchInput.value.trim() : "";
+      
+      const res = await fetch("/api/pins?q=" + encodeURIComponent(q));
       const data = await res.json();
       const jsonString = JSON.stringify(data.pins);
-      if (jsonString === lastJson) return;
+      if (jsonString === lastJson && !force) return;
       lastJson = jsonString;
 
       container.innerHTML = "";
       data.pins.forEach(pin => {
         const card = document.createElement("div");
         card.className = "pin-card";
+        const authorInitial = pin.author ? pin.author[0].toUpperCase() : 'U';
         card.innerHTML = `
-          <img src="${pin.image_url}"
-               class="pin-card-img" alt="${pin.title}">
+          <div class="pin-card-img-wrapper" style="cursor: zoom-in;" onclick="window.openPinModal('${pin.id}', '${pin.image_url}', '${pin.title.replace(/'/g, "\\'")}', '${(pin.description || "").replace(/'/g, "\\'")}', '${pin.author.replace(/'/g, "\\'")}', '${authorInitial}')">
+            <img src="${pin.image_url}" class="pin-card-img" alt="${pin.title}">
+            <div class="pin-card-overlay">
+              <div class="d-flex justify-content-end w-100">
+                <button type="button" class="action-btn save-btn ${pin.saved ? "active" : ""}" data-pin="${pin.id}">
+                  <span class="save-icon">${pin.saved ? "Saved" : "Save"}</span>
+                </button>
+              </div>
+              <div class="d-flex justify-content-between align-items-end w-100 mt-auto">
+                <button class="action-btn share-btn" type="button" data-pin="${pin.id}">
+                  <span class="icon">📤</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
           <div class="pin-card-body">
-            <div class="fw-semibold text-truncate">${pin.title}</div>
-            ${pin.description ? `<small class="text-muted d-block text-truncate">${pin.description}</small>` : ""}
-            <small class="text-muted d-block">
-              by ${pin.author} · ${pin.created_at}
-            </small>
-
-            <div class="d-flex gap-2 mt-2 align-items-center flex-wrap">
-
-              <button type="button"
-                      class="btn btn-sm btn-outline-danger like-btn ${pin.liked ? "active" : ""}"
-                      data-pin="${pin.id}">
+            <div class="pin-title">${pin.title}</div>
+            ${pin.description ? `<div class="pin-desc">${pin.description}</div>` : ""}
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="pin-author">
+                <div class="author-avatar">${authorInitial}</div>
+                <span>${pin.author}</span>
+              </div>
+              <button type="button" class="action-btn like-btn ${pin.liked ? "active" : ""}" data-pin="${pin.id}">
                 <span class="like-icon">${pin.liked ? "♥" : "♡"}</span>
                 <span class="like-count">${pin.likes_count}</span>
-              </button>
-
-              <button type="button"
-                      class="btn btn-sm btn-outline-secondary save-btn ${pin.saved ? "active" : ""}"
-                      data-pin="${pin.id}">
-                <span class="save-icon">${pin.saved ? "🔖 Saved" : "🔖 Save"}</span>
-              </button>
-
-              <button class="btn btn-sm btn-outline-secondary share-btn"
-                      type="button"
-                      data-pin="${pin.id}">
-                <span class="icon">📤</span> Share
               </button>
             </div>
 
@@ -441,8 +473,8 @@ function startPinsPolling(container) {
     } catch (err) {
       console.error("poll pins error", err);
     }
-  }
+  };
 
-  fetchAndRenderPins();
-  setInterval(fetchAndRenderPins, 5000);
+  window.fetchAndRenderPinsGlobal();
+  setInterval(window.fetchAndRenderPinsGlobal, 5000);
 }

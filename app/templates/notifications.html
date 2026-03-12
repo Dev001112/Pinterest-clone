@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Notifications – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">🔔 Notifications</div></header>
+    <div class="form-card" style="max-width:640px">
+      {% if notifications %}
+      <div class="notif-list">
+        {% for n in notifications %}
+        <div class="notif-item {% if not n.is_read %}notif-unread{% endif %}">
+          <div class="notif-avatar">
+            {% if n.actor %}{{ n.actor.username[0]|upper }}{% else %}?{% endif %}
+          </div>
+          <div class="notif-body">
+            {% if n.type == 'like' %}
+              <a href="{{ url_for('main.user_profile', username=n.actor.username) }}"><strong>{{ n.actor.username }}</strong></a>
+              liked your pin
+              {% if n.pin %}<a href="{{ url_for('main.pin_detail', pin_id=n.pin_id) }}">"{{ n.pin.title }}"</a>{% endif %}
+            {% elif n.type == 'comment' %}
+              <a href="{{ url_for('main.user_profile', username=n.actor.username) }}"><strong>{{ n.actor.username }}</strong></a>
+              commented on
+              {% if n.pin %}<a href="{{ url_for('main.pin_detail', pin_id=n.pin_id) }}">"{{ n.pin.title }}"</a>{% endif %}
+            {% elif n.type == 'follow' %}
+              <a href="{{ url_for('main.user_profile', username=n.actor.username) }}"><strong>{{ n.actor.username }}</strong></a>
+              started following you
+            {% endif %}
+            <div class="notif-time">{{ n.created_at.strftime('%b %d, %Y · %H:%M') }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon">🔔</div><p>No notifications yet.</p></div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}

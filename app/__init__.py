@@ -31,7 +31,11 @@ def create_app():
     upload_folder = os.path.join(app.root_path, "static", "uploads")
     os.makedirs(upload_folder, exist_ok=True)
     app.config["UPLOAD_FOLDER"] = upload_folder
-    app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16MB
+
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        return "File too large. Maximum size is 16MB. Please go back.", 413
 
     # init extensions
     db.init_app(app)
@@ -204,6 +208,7 @@ def create_app():
         pin = Pin(
             title=title,
             description=description,
+            tags=tags,
             image_filename=filename,
             author=current_user,
         )
@@ -404,7 +409,17 @@ def create_app():
     @app.route("/api/pins")
     @login_required
     def api_pins():
-        pins = Pin.query.order_by(Pin.created_at.desc()).all()
+        q = request.args.get("q", "").strip()
+        query = Pin.query
+        if q:
+            query = query.filter(
+                or_(
+                    Pin.title.ilike(f"%{q}%"),
+                    Pin.description.ilike(f"%{q}%"),
+                    Pin.tags.ilike(f"%{q}%")
+                )
+            )
+        pins = query.order_by(Pin.created_at.desc()).all()
 
         user_liked_ids = {like.pin_id for like in current_user.likes}
         user_saved_ids = {save.pin_id for save in current_user.saves}
@@ -442,6 +457,35 @@ def create_app():
                 {"id": u.id, "username": u.username}
                 for u in users if u.id != current_user.id
             ]
+        })
+
+    # ---------- COMMENTS API ----------
+
+    @app.route("/api/pins/<int:pin_id>/comments", methods=["GET", "POST"])
+    @login_required
+    def api_comments(pin_id):
+        from .models import Comment
+        pin = Pin.query.get_or_404(pin_id)
+        if request.method == "POST":
+            data = request.get_json()
+            text = data.get("text", "").strip() if data else ""
+            if text:
+                c = Comment(text=text, user_id=current_user.id, pin_id=pin.id)
+                db.session.add(c)
+                db.session.commit()
+                return jsonify({"ok": True})
+            return jsonify({"ok": False}), 400
+
+        # GET
+        comments = Comment.query.filter_by(pin_id=pin.id).order_by(Comment.created_at.asc()).all()
+        return jsonify({
+            "comments": [{
+                "id": c.id,
+                "text": c.text,
+                "author": c.user.username,
+                "author_initial": c.user.username[0].upper(),
+                "created_at": c.created_at.strftime("%Y-%m-%d %H:%M")
+            } for c in comments]
         })
 
     return app

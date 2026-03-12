@@ -54,6 +54,13 @@
           <span>Profile</span>
         </a>
       </li>
+      <!-- Dark mode toggle -->
+      <li class="mt-4 px-3 py-2">
+        <div class="form-check form-switch d-flex align-items-center gap-2">
+          <input class="form-check-input mt-0" type="checkbox" role="switch" id="themeToggle" style="cursor: pointer;">
+          <label class="form-check-label small fw-semibold" for="themeToggle" style="cursor: pointer;">Dark mode</label>
+        </div>
+      </li>
     </ul>
 
     <hr>
@@ -78,9 +85,10 @@
           Home
         {% endif %}
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <input type="text" class="form-control form-control-sm"
-               placeholder="Quick search (coming soon)">
+      <div class="d-flex align-items-center gap-2" style="width: 300px;">
+        <input type="text" class="form-control form-control-sm search-input text-input"
+               id="globalSearchInput"
+               placeholder="Search by title, tag, description...">
       </div>
     </header>
 
@@ -97,44 +105,36 @@
         <div class="pin-grid mt-3" id="pinGrid">
           {% for pin in pins %}
           <div class="pin-card">
-            <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
-                 class="pin-card-img" alt="{{ pin.title }}">
+            <div class="pin-card-img-wrapper">
+              <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}" class="pin-card-img" alt="{{ pin.title }}">
+              <div class="pin-card-overlay">
+                <div class="d-flex justify-content-end w-100">
+                  <button type="button" class="action-btn save-btn {% if pin.id in user_saved_ids %}active{% endif %}" data-pin="{{ pin.id }}">
+                    <span class="save-icon">{% if pin.id in user_saved_ids %}Saved{% else %}Save{% endif %}</span>
+                  </button>
+                </div>
+                <div class="d-flex justify-content-between align-items-end w-100 mt-auto">
+                  <button class="action-btn share-btn" type="button" data-pin="{{ pin.id }}">
+                    <span class="icon">📤</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <div class="pin-card-body">
-              <div class="fw-semibold text-truncate">{{ pin.title }}</div>
+              <div class="pin-title">{{ pin.title }}</div>
               {% if pin.description %}
-                <small class="text-muted d-block text-truncate">{{ pin.description }}</small>
+                <div class="pin-desc">{{ pin.description }}</div>
               {% endif %}
-              <small class="text-muted d-block">
-                by {{ pin.author.username }} · {{ pin.created_at.strftime('%Y-%m-%d') }}
-              </small>
-
-              <div class="d-flex gap-2 mt-2 align-items-center flex-wrap">
-
-                <!-- Like button -->
-                <button type="button"
-                        class="btn btn-sm btn-outline-danger like-btn {% if pin.id in user_liked_ids %}active{% endif %}"
-                        data-pin="{{ pin.id }}">
-                  <span class="like-icon">
-                    {% if pin.id in user_liked_ids %}♥{% else %}♡{% endif %}
-                  </span>
+              
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="pin-author">
+                  <div class="author-avatar">{{ pin.author.username[0]|upper }}</div>
+                  <span>{{ pin.author.username }}</span>
+                </div>
+                <button type="button" class="action-btn like-btn {% if pin.id in user_liked_ids %}active{% endif %}" data-pin="{{ pin.id }}">
+                  <span class="like-icon">{% if pin.id in user_liked_ids %}♥{% else %}♡{% endif %}</span>
                   <span class="like-count">{{ pin.likes|length }}</span>
-                </button>
-
-                <!-- Save button -->
-                <button type="button"
-                        class="btn btn-sm btn-outline-secondary save-btn {% if pin.id in user_saved_ids %}active{% endif %}"
-                        data-pin="{{ pin.id }}">
-                  <span class="save-icon">
-                    {% if pin.id in user_saved_ids %}🔖 Saved{% else %}🔖 Save{% endif %}
-                  </span>
-                </button>
-
-                <!-- Share button -->
-                <button class="btn btn-sm btn-outline-secondary share-btn"
-                        type="button"
-                        data-pin="{{ pin.id }}">
-                  <span class="icon">📤</span>
-                  <span>Share</span>
                 </button>
               </div>
 
@@ -176,7 +176,7 @@
               <div id="uploadPlaceholder">
                 <p class="mb-1 fw-semibold">Drop image here, or click to browse</p>
                 <p class="small text-muted mb-0">
-                  JPG, PNG, GIF up to 5MB
+                  JPG, PNG, GIF up to 16MB
                 </p>
               </div>
               <img id="uploadPreview"

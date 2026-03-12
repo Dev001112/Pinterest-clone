@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Following Feed – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">💫 Following</div></header>
+
+    {% if pins %}
+    <div class="pin-masonry">
+      {% for pin in pins %}
+      <div class="pin-card">
+        <div class="pin-img-wrap">
+          <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}">
+            <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+                 class="pin-img" alt="{{ pin.title }}" loading="lazy">
+          </a>
+          <div class="pin-overlay">
+            <button class="btn-icon like-btn {% if pin.id in user_liked_ids %}liked{% endif %}" data-pin="{{ pin.id }}">
+              {% if pin.id in user_liked_ids %}♥{% else %}♡{% endif %}
+              <span class="like-count">{{ pin.likes|length }}</span>
+            </button>
+            <button class="btn-icon save-btn {% if pin.id in user_saved_ids %}saved{% endif %}" data-pin="{{ pin.id }}">🏷</button>
+          </div>
+        </div>
+        <div class="pin-body">
+          <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}" class="pin-title">{{ pin.title }}</a>
+          <div class="pin-meta">
+            <a href="{{ url_for('main.user_profile', username=pin.author.username) }}" class="pin-author">
+              <span class="mini-avatar">{{ pin.author.username[0]|upper }}</span>{{ pin.author.username }}
+            </a>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="margin-top:4rem">
+      <div class="empty-icon">💫</div>
+      <h4>Nothing here yet</h4>
+      <p>Follow some people to see their pins here.</p>
+      <a href="{{ url_for('main.explore') }}" class="btn-primary mt-2">Explore PinBoard</a>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

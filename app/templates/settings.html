@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Settings – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">Settings</div></header>
+    <div class="form-card" style="max-width:560px">
+      <h2 class="form-card-title">⚙️ Account Settings</h2>
+      <form method="post" action="{{ url_for('main.settings') }}">
+        {{ form.hidden_tag() }}
+        <div class="field-group">
+          {{ form.username.label }}
+          {{ form.username(class="field-input") }}
+        </div>
+        <div class="field-group">
+          {{ form.email.label }}
+          {{ form.email(class="field-input") }}
+        </div>
+        <hr>
+        <h5>Change Password</h5>
+        <div class="field-group">
+          {{ form.current_password.label }}
+          {{ form.current_password(class="field-input", placeholder="Current password") }}
+        </div>
+        <div class="field-group">
+          {{ form.new_password.label }}
+          {{ form.new_password(class="field-input", placeholder="New password (min 6 chars)") }}
+        </div>
+        <div class="field-group">
+          {{ form.confirm_password.label }}
+          {{ form.confirm_password(class="field-input", placeholder="Confirm new password") }}
+        </div>
+        {{ form.submit(class="btn-primary") }}
+      </form>
+
+      <hr class="mt-4">
+      <h5 class="text-danger">Danger Zone</h5>
+      <p class="text-muted small">Delete your account permanently. This cannot be undone.</p>
+      <button class="btn-danger" disabled title="Coming soon">Delete Account</button>
+    </div>
+  </main>
+</div>
+{% endblock %}

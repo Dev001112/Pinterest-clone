@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ pin.title }} – PinBoard{% endblock %}
+
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar">
+      <a href="{{ url_for('main.dashboard') }}" class="btn-back">← Back</a>
+    </header>
+
+    <div class="pin-detail-wrap">
+      <div class="pin-detail-img-col">
+        <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+             alt="{{ pin.title }}" class="pin-detail-img">
+        {% if pin.source_url %}
+        <a href="{{ pin.source_url }}" target="_blank" rel="noopener" class="pin-source-link">
+          🔗 Visit source
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="pin-detail-info-col">
+        <div class="pin-detail-actions">
+          <button class="btn-like-lg {% if user_liked %}liked{% endif %}" id="detailLikeBtn" data-pin="{{ pin.id }}">
+            <span id="detailLikeIcon">{% if user_liked %}♥{% else %}♡{% endif %}</span>
+            <span id="detailLikeCount">{{ likes_count }}</span>
+          </button>
+          <button class="btn-save-lg {% if user_saved %}saved{% endif %}" id="detailSaveBtn" data-pin="{{ pin.id }}">
+            {% if user_saved %}🔖 Saved{% else %}🏷 Save{% endif %}
+          </button>
+
+          {% if pin.author == current_user %}
+          <a href="{{ url_for('main.edit_pin', pin_id=pin.id) }}" class="btn-secondary">✏️ Edit</a>
+          <form method="post" action="{{ url_for('main.delete_pin', pin_id=pin.id) }}" class="d-inline"
+                onsubmit="return confirm('Delete this pin permanently?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-danger">🗑 Delete</button>
+          </form>
+          {% endif %}
+        </div>
+
+        <h1 class="pin-detail-title">{{ pin.title }}</h1>
+        {% if pin.description %}
+        <p class="pin-detail-desc">{{ pin.description }}</p>
+        {% endif %}
+
+        {% set tag_list = pin.tags.all() %}
+        {% if tag_list %}
+        <div class="pin-detail-tags">
+          {% for t in tag_list %}
+          <a href="{{ url_for('main.dashboard', tag=t.name) }}" class="tag-chip">#{{ t.name }}</a>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="pin-detail-meta">
+          <a href="{{ url_for('main.user_profile', username=pin.author.username) }}" class="pin-author-block">
+            <div class="author-avatar-md">{{ pin.author.username[0]|upper }}</div>
+            <div>
+              <div class="author-name">{{ pin.author.username }}</div>
+              <div class="author-sub">{{ pin.created_at.strftime('%b %d, %Y') }} · 👁 {{ pin.views or 0 }} views</div>
+            </div>
+          </a>
+        </div>
+
+        <hr class="pin-divider">
+
+        <h4 class="comments-heading">💬 Comments ({{ pin.comments|length }})</h4>
+        <div class="comments-list" id="commentsList">
+          {% for c in pin.comments | sort(attribute='created_at') %}
+          <div class="comment-item">
+            <a href="{{ url_for('main.user_profile', username=c.user.username) }}" class="comment-author-link">
+              <div class="mini-avatar">{{ c.user.username[0]|upper }}</div>
+              <strong>{{ c.user.username }}</strong>
+            </a>
+            <p class="comment-text">{{ c.text }}</p>
+            <div class="comment-meta">{{ c.created_at.strftime('%b %d, %Y') }}
+              {% if c.user_id == current_user.id or pin.author == current_user %}
+              <form method="post" action="{{ url_for('main.delete_comment', comment_id=c.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn-del-comment">Delete</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <p class="empty-hint">No comments yet. Be the first!</p>
+          {% endfor %}
+        </div>
+
+        <form method="post" action="{{ url_for('main.comment', pin_id=pin.id) }}" class="comment-form">
+          {{ form.hidden_tag() }}
+          <div class="comment-input-row">
+            {{ form.text(class="field-input", placeholder="Add a comment…", rows=1) }}
+            {{ form.submit(class="btn-primary") }}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if related_pins %}
+    <div class="related-section">
+      <h3 class="related-title">Related Pins</h3>
+      <div class="pin-masonry">
+        {% for rp in related_pins %}
+        <div class="pin-card">
+          <a href="{{ url_for('main.pin_detail', pin_id=rp.id) }}">
+            <img src="{{ url_for('static', filename='uploads/' ~ rp.image_filename) }}"
+                 class="pin-img" alt="{{ rp.title }}" loading="lazy">
+          </a>
+          <div class="pin-body">
+            <a class="pin-title" href="{{ url_for('main.pin_detail', pin_id=rp.id) }}">{{ rp.title }}</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+const likeBtn = document.getElementById('detailLikeBtn');
+if (likeBtn) {
+  likeBtn.addEventListener('click', async () => {
+    const res = await fetch(`/pin/${likeBtn.dataset.pin}/like`, {
+      method: 'POST', headers: {'X-CSRFToken': csrf}
+    });
+    const d = await res.json();
+    if (d.ok) {
+      document.getElementById('detailLikeIcon').textContent = d.liked ? '♥' : '♡';
+      document.getElementById('detailLikeCount').textContent = d.count;
+      likeBtn.classList.toggle('liked', d.liked);
+    }
+  });
+}
+
+const saveBtn = document.getElementById('detailSaveBtn');
+if (saveBtn) {
+  saveBtn.addEventListener('click', async () => {
+    const res = await fetch(`/pin/${saveBtn.dataset.pin}/save`, {
+      method: 'POST', headers: {'X-CSRFToken': csrf}
+    });
+    const d = await res.json();
+    if (d.ok) {
+      saveBtn.textContent = d.saved ? '🔖 Saved' : '🏷 Save';
+      saveBtn.classList.toggle('saved', d.saved);
+    }
+  });
+}
+</script>
+{% endblock %}

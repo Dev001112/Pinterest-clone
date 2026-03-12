@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">Edit Profile</div></header>
+    <div class="form-card" style="max-width:560px">
+      <h2 class="form-card-title">✏️ Edit Profile</h2>
+      <form method="post" action="{{ url_for('main.edit_profile') }}" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <div class="field-group">
+          {{ form.username.label }}
+          {{ form.username(class="field-input") }}
+        </div>
+        <div class="field-group">
+          {{ form.bio.label }}
+          {{ form.bio(class="field-input", rows=3, placeholder="Tell the world about yourself…") }}
+        </div>
+        <div class="field-group">
+          {{ form.website.label }}
+          {{ form.website(class="field-input", placeholder="https://yoursite.com") }}
+        </div>
+        <div class="field-group">
+          {{ form.avatar.label }}
+          {{ form.avatar(class="field-input") }}
+          {% if current_user.avatar_filename and current_user.avatar_filename != 'default.jpg' %}
+          <small class="text-muted">Current avatar: {{ current_user.avatar_filename }}</small>
+          {% endif %}
+        </div>
+        {{ form.submit(class="btn-primary") }}
+        <a href="{{ url_for('main.profile') }}" class="btn-secondary ms-2">Cancel</a>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% set active_page = active_page | default('') %}
+<aside class="sidebar" id="mainSidebar">
+  <div class="sidebar-header">
+    <a href="{{ url_for('main.dashboard') }}" class="sidebar-logo text-decoration-none">
+      <span class="logo-icon">📌</span>
+      <span class="logo-text">PinBoard</span>
+    </a>
+    <button class="sidebar-close" id="sidebarClose" aria-label="Close">✕</button>
+  </div>
+
+  <a href="{{ url_for('main.profile') }}" class="sidebar-profile-card text-decoration-none">
+    <div class="sidebar-avatar-wrap">
+      {% if current_user.avatar_filename and current_user.avatar_filename != 'default.jpg' %}
+        <img src="{{ url_for('static', filename='uploads/' ~ current_user.avatar_filename) }}"
+             alt="{{ current_user.username }}" class="sidebar-avatar-img">
+      {% else %}
+        <div class="sidebar-avatar-init">{{ current_user.username[0] | upper }}</div>
+      {% endif %}
+    </div>
+    <div class="sidebar-profile-info">
+      <div class="sidebar-username">{{ current_user.username }}</div>
+      <div class="sidebar-profile-sub">View profile →</div>
+    </div>
+  </a>
+
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('main.dashboard', tab='home') }}"
+       class="sidebar-link {% if active_page == 'home' %}active{% endif %}">
+      <span class="s-icon">🏠</span><span>Home</span>
+    </a>
+    <a href="{{ url_for('main.explore') }}"
+       class="sidebar-link {% if active_page == 'explore' %}active{% endif %}">
+      <span class="s-icon">🔥</span><span>Explore</span>
+    </a>
+    <a href="{{ url_for('main.following_feed') }}"
+       class="sidebar-link {% if active_page == 'following' %}active{% endif %}">
+      <span class="s-icon">💫</span><span>Following</span>
+    </a>
+    <a href="{{ url_for('main.dashboard', tab='upload') }}"
+       class="sidebar-link {% if active_page == 'upload' %}active{% endif %}">
+      <span class="s-icon">➕</span><span>Upload</span>
+    </a>
+    <a href="{{ url_for('main.dashboard', tab='messages') }}"
+       class="sidebar-link {% if active_page == 'messages' %}active{% endif %}">
+      <span class="s-icon">💬</span><span>Messages</span>
+      <span class="s-badge d-none" id="msgBadge"></span>
+    </a>
+    <a href="{{ url_for('main.notifications') }}"
+       class="sidebar-link {% if active_page == 'notifications' %}active{% endif %}">
+      <span class="s-icon">🔔</span><span>Notifications</span>
+      <span class="s-badge d-none" id="notifBadge"></span>
+    </a>
+    <a href="{{ url_for('main.profile') }}"
+       class="sidebar-link {% if active_page == 'profile' %}active{% endif %}">
+      <span class="s-icon">👤</span><span>Profile</span>
+    </a>
+    <a href="{{ url_for('main.settings') }}"
+       class="sidebar-link {% if active_page == 'settings' %}active{% endif %}">
+      <span class="s-icon">⚙️</span><span>Settings</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="dark-toggle" id="darkModeToggle" title="Toggle dark mode">
+      <span id="darkIcon">🌙</span> <span id="darkLabel">Dark Mode</span>
+    </button>
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-logout">🚪 Logout</a>
+  </div>
+</aside>
+
+<div class="sidebar-overlay d-none" id="sidebarOverlay"></div>
+<button class="hamburger" id="hamburgerBtn" aria-label="Open menu">☰</button>

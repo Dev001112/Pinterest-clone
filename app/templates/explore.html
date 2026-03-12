@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Explore – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">🔥 Explore</div></header>
+
+    <div class="tag-cloud mb-4">
+      {% for tag, cnt in popular_tags %}
+      <a href="{{ url_for('main.dashboard', tag=tag.name) }}" class="tag-pill">#{{ tag.name }}</a>
+      {% endfor %}
+    </div>
+
+    <h3 class="section-heading">⚡ Trending This Week</h3>
+    <div class="pin-masonry">
+      {% for pin in trending_pins %}
+      <div class="pin-card">
+        <div class="pin-img-wrap">
+          <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}">
+            <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+                 class="pin-img" alt="{{ pin.title }}" loading="lazy">
+          </a>
+          <div class="pin-overlay">
+            <button class="btn-icon like-btn {% if pin.id in user_liked_ids %}liked{% endif %}" data-pin="{{ pin.id }}">
+              {% if pin.id in user_liked_ids %}♥{% else %}♡{% endif %}
+              <span class="like-count">{{ pin.likes|length }}</span>
+            </button>
+            <button class="btn-icon save-btn {% if pin.id in user_saved_ids %}saved{% endif %}" data-pin="{{ pin.id }}">🏷</button>
+          </div>
+        </div>
+        <div class="pin-body">
+          <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}" class="pin-title">{{ pin.title }}</a>
+          <div class="pin-meta">
+            <a href="{{ url_for('main.user_profile', username=pin.author.username) }}" class="pin-author">
+              <span class="mini-avatar">{{ pin.author.username[0]|upper }}</span>{{ pin.author.username }}
+            </a>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon">🔥</div><p>No trending pins yet — upload some!</p></div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

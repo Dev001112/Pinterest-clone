@@ -87,16 +87,27 @@
           <div class="pin-grid">
             {% for pin in liked_pins %}
             <div class="pin-card">
-              <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
-                   class="pin-card-img" alt="{{ pin.title }}">
+              <div class="pin-card-img-wrapper">
+                <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}" class="pin-card-img" alt="{{ pin.title }}">
+                <div class="pin-card-overlay">
+                  <div class="d-flex justify-content-end w-100">
+                    <button type="button" class="action-btn save-btn" data-pin="{{ pin.id }}">
+                      <span class="save-icon">Save</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div class="pin-card-body">
-                <div class="fw-semibold text-truncate">{{ pin.title }}</div>
+                <div class="pin-title">{{ pin.title }}</div>
                 {% if pin.description %}
-                  <small class="text-muted d-block text-truncate">{{ pin.description }}</small>
+                  <div class="pin-desc">{{ pin.description }}</div>
                 {% endif %}
-                <small class="text-muted d-block">
-                  by {{ pin.author.username }} · {{ pin.created_at.strftime('%Y-%m-%d') }}
-                </small>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <div class="pin-author">
+                    <div class="author-avatar">{{ pin.author.username[0]|upper }}</div>
+                    <span>{{ pin.author.username }}</span>
+                  </div>
+                </div>
               </div>
             </div>
             {% endfor %}
@@ -119,16 +130,27 @@
           <div class="pin-grid">
             {% for pin in saved_pins %}
             <div class="pin-card">
-              <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
-                   class="pin-card-img" alt="{{ pin.title }}">
+              <div class="pin-card-img-wrapper">
+                <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}" class="pin-card-img" alt="{{ pin.title }}">
+                <div class="pin-card-overlay">
+                  <div class="d-flex justify-content-end w-100">
+                    <button type="button" class="action-btn save-btn active" data-pin="{{ pin.id }}">
+                      <span class="save-icon">Saved</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
               <div class="pin-card-body">
-                <div class="fw-semibold text-truncate">{{ pin.title }}</div>
+                <div class="pin-title">{{ pin.title }}</div>
                 {% if pin.description %}
-                  <small class="text-muted d-block text-truncate">{{ pin.description }}</small>
+                  <div class="pin-desc">{{ pin.description }}</div>
                 {% endif %}
-                <small class="text-muted d-block">
-                  by {{ pin.author.username }} · {{ pin.created_at.strftime('%Y-%m-%d') }}
-                </small>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <div class="pin-author">
+                    <div class="author-avatar">{{ pin.author.username[0]|upper }}</div>
+                    <span>{{ pin.author.username }}</span>
+                  </div>
+                </div>
               </div>
             </div>
             {% endfor %}

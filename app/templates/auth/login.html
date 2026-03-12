@@ -4,9 +4,10 @@
 
 {% block body %}
 <div class="auth-wrapper">
-  <div class="card auth-card p-4">
+  <div class="card auth-card">
     <div class="card-body">
-      <h2 class="mb-1 text-center">Welcome back</h2>
+      <div class="auth-logo">P</div>
+      <h2 class="mb-1 text-center font-weight-bold">Welcome back</h2>
       <p class="text-muted text-center mb-4">Log in to your PinBoard account</p>
 
       <form method="post">
@@ -14,15 +15,15 @@
           <label class="form-label">Email</label>
           <input name="email" type="email" class="form-control" placeholder="you@example.com" required>
         </div>
-        <div class="mb-2">
+        <div class="mb-3">
           <label class="form-label d-flex justify-content-between">
             <span>Password</span>
-            <a href="#" class="small text-muted">Forgot?</a>
+            <a href="#" class="small text-muted font-weight-bold">Forgot?</a>
           </label>
           <input name="password" type="password" class="form-control" placeholder="••••••••" required>
         </div>
 
-        <button type="submit" class="btn btn-dark w-100 mt-3">
+        <button type="submit" class="btn btn-primary-red w-100 mt-2">
           Login
         </button>
       </form>

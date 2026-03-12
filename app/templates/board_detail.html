@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ board.name }} – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar">
+      <a href="{{ url_for('main.user_profile', username=board.owner.username) }}" class="btn-back">← {{ board.owner.username }}</a>
+    </header>
+
+    <div class="board-detail-header">
+      <h1 class="profile-name">📋 {{ board.name }}</h1>
+      {% if board.description %}<p class="profile-bio">{{ board.description }}</p>{% endif %}
+      <div class="profile-stats">
+        <div class="stat"><strong>{{ pins|length }}</strong><span>Pins</span></div>
+        {% if board.is_private %}<div class="stat"><span>🔒 Private</span></div>{% endif %}
+      </div>
+      {% if board.user_id == current_user.id %}
+      <form method="post" action="{{ url_for('boards.delete_board', board_id=board.id) }}"
+            class="mt-2" onsubmit="return confirm('Delete this board?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-danger">🗑 Delete Board</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="pin-masonry mt-3">
+      {% for pin in pins %}
+      <div class="pin-card">
+        <div class="pin-img-wrap">
+          <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}">
+            <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+                 class="pin-img" alt="{{ pin.title }}" loading="lazy">
+          </a>
+          {% if board.user_id == current_user.id %}
+          <div class="pin-overlay">
+            <button class="btn-icon remove-from-board" data-board="{{ board.id }}" data-pin="{{ pin.id }}" title="Remove">✕</button>
+          </div>
+          {% endif %}
+        </div>
+        <div class="pin-body">
+          <a class="pin-title" href="{{ url_for('main.pin_detail', pin_id=pin.id) }}">{{ pin.title }}</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon">📋</div><p>This board is empty.</p></div>
+      {% endfor %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const csrf = document.querySelector('meta[name="csrf-token"]').content;
+document.querySelectorAll('.remove-from-board').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    if (!confirm('Remove pin from board?')) return;
+    const res = await fetch(`/board/${btn.dataset.board}/remove/${btn.dataset.pin}`, {
+      method: 'POST', headers: {'X-CSRFToken': csrf}
+    });
+    const d = await res.json();
+    if (d.ok) btn.closest('.pin-card').remove();
+  });
+});
+</script>
+{% endblock %}

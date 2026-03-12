@@ -40,6 +40,7 @@ class Pin(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(140), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    tags = db.Column(db.String(255), nullable=True)
     image_filename = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -48,6 +49,17 @@ class Pin(db.Model):
     messages = db.relationship("Message", backref="pin", lazy=True)
     likes = db.relationship("Like", backref="pin", lazy=True)
     saves = db.relationship("SavedPin", backref="pin", lazy=True)
+    comments = db.relationship("Comment", backref="pin", lazy=True, cascade="all, delete-orphan")
+
+
+class Comment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    pin_id = db.Column(db.Integer, db.ForeignKey("pin.id"), nullable=False)
+
+    user = db.relationship("User", backref="pin_comments", lazy=True)
 
 
 class Message(db.Model):

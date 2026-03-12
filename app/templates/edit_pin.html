@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Edit Pin – PinBoard{% endblock %}
+{% block body %}
+<div class="app-layout">
+  {% include "_sidebar.html" %}
+  <main class="main-content">
+    <header class="topbar"><div class="topbar-title">Edit Pin</div></header>
+    <div class="form-card" style="max-width:560px">
+      <h2 class="form-card-title">✏️ Edit Pin</h2>
+      <div class="mb-3">
+        <img src="{{ url_for('static', filename='uploads/' ~ pin.image_filename) }}"
+             alt="{{ pin.title }}" style="max-width:100%;border-radius:12px;">
+      </div>
+      <form method="post" action="{{ url_for('main.edit_pin', pin_id=pin.id) }}">
+        {{ form.hidden_tag() }}
+        <div class="field-group">
+          {{ form.title.label }}
+          {{ form.title(class="field-input") }}
+        </div>
+        <div class="field-group">
+          {{ form.description.label }}
+          {{ form.description(class="field-input", rows=3) }}
+        </div>
+        <div class="field-group">
+          {{ form.tags.label }}
+          {{ form.tags(class="field-input", placeholder="#design #ui") }}
+        </div>
+        <div class="field-group">
+          {{ form.source_url.label }}
+          {{ form.source_url(class="field-input", placeholder="https://example.com") }}
+        </div>
+        {{ form.submit(class="btn-primary") }}
+        <a href="{{ url_for('main.pin_detail', pin_id=pin.id) }}" class="btn-secondary ms-2">Cancel</a>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %}
